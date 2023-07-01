@@ -1,0 +1,164 @@
+---
+title: "Practicum"
+author: "Pearl Naomi Munnangi"
+date: "2023-06-27"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+```
+
+# 1. Data Loading
+
+```{r,echo = TRUE}
+
+# Load the downloaded datasets into separate dataframes and observe the dimensions
+gt1 <- read_excel("G&T Results 2017-18.xlsx")
+gt2 <- read_excel("G&T Results 2018-19.xlsx")
+
+dim(gt1)
+dim(gt2)
+
+```
+
+The two files are loaded into r dataframes, there are 117 rows and 12 columsns in 2017-18 dataset and there are 100 rows and 14 columns in 2018-19 dataset
+
+
+
+```{r}
+colnames(gt1)
+colnames(gt2)
+
+```
+
+# 2. Data Combining
+```{r}
+# Remove the the Extra columns from gt2 
+gt2 <- gt2[ , -c(13:14)]
+
+# Combine the two data frames
+gt <- rbind(gt1, gt2)
+dim(gt)
+```
+Now the dataset has 217 rows and 12 columns
+```{r}
+str(gt)
+```
+
+
+# 3. Data Cleaning
+#a. Missing values
+```{r}
+# Find the missing value counts in each feature
+sapply(gt, function(x) sum(is.na(x)))
+
+```
+School preferences, School assigned and will you enroll there features are having missing values more than 10 % hence those columns/features ar excluded
+
+```{r}
+# Drop the columns with high missisng values
+gt <- select(gt,-c("School Preferences","School Assigned","Will you enroll there?"))
+dim(gt)
+```
+
+
+```{r}
+#Now the rows with the mising values will be ommitted
+gt <- na.omit(gt)
+dim(gt)
+
+```
+Now the dataset has 193 non missing rows with 9 features 
+
+
+#b. Errors
+
+```{r}
+# Some columns has score in x/y format. Convert that into numeric
+select_first <- function(x) {
+  sapply(strsplit(as.character(x), "/"), `[`, 1)
+}
+
+gt$"OLSAT Verbal Score" <- as.numeric(select_first(gt$"OLSAT Verbal Score"))
+gt$"NNAT Non Verbal Raw Score" <- as.numeric(select_first(gt$"NNAT Non Verbal Raw Score"))
+
+```
+
+```{r}
+# Convert other numeric variables to num from chr
+gt$"OLSAT Verbal Percentile" <- as.numeric(gt$"OLSAT Verbal Percentile")
+gt$"NNAT Non Verbal Percentile" <- as.numeric(gt$"NNAT Non Verbal Percentile")
+
+str(gt)
+```
+
+```{r}
+# Drop the NAs due coecion
+gt <- na.omit(gt)
+dim(gt)
+```
+Finally the dataset has 182 rows and 9 columns
+
+```{r}
+# Find the unique values in Birth months column
+unique_months <- unique(gt$`Birth Month`)
+print(unique_months)
+
+```
+```{r}
+# there are some numeric months so replace them with month name
+month.names <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+
+# Replace the numeric values with month names
+for(i in 1:12){
+  gt$`Birth Month` <- replace(gt$`Birth Month`, gt$`Birth Month` == as.character(i), month.names[i])
+}
+
+# Check the result
+unique(gt$`Birth Month`)
+
+```
+
+```{r}
+# There are some instances with wrong spelleings for febrauary and september. 
+#Correct the spelling of "Febrauary" and "september"
+gt$`Birth Month` <- sub("Febrauary", "February", gt$`Birth Month`)
+gt$`Birth Month` <- sub("september", "September", gt$`Birth Month`)
+```
+
+
+# 4.Data Plottng
+#a Box plot
+```{r}
+# Boxplot
+ggplot(gt, aes(x = "NNAT Non Verbal Raw Score", y = `NNAT Non Verbal Raw Score`)) +
+  geom_boxplot(fill = "#0073C2", color = "#e9ecef", alpha = 0.9) +
+  labs(title="Boxplot of NNAT Non Verbal Raw Score",
+       x="",
+       y="NNAT Non Verbal Raw Score")
+
+```
+
+#b Scatter plot
+```{r}
+# Scatter plot
+ggplot(gt, aes(x = `OLSAT Verbal Score`, y = `NNAT Non Verbal Raw Score`)) +
+  geom_point(alpha = 0.6, color = "red") +
+    labs(title="Scatter plot of OLSAT Verbal Score vs. NNAT Non Verbal Raw Score",
+       x="OLSAT Verbal Score",
+       y="NNAT Non Verbal Raw Score")
+```
+#c  Bar plot
+```{r}
+ggplot(gt, aes(x = `Birth Month`)) +
+  geom_bar(fill = "lightgreen", color = "lightblue", alpha = 0.9) +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="Bar Chart of Birth Month Counts",
+       x="Birth Month",
+       y="Count")
+```
+
